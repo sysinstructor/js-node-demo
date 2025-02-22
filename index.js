@@ -1,54 +1,87 @@
-const express = require("express");
-const shortid = require('shortid');
-const lowdb = require('lowdb');
+const app = require('../..');
+const helper = require("../helpers.js")
 
-const app = express();
-const port = process.env.PORT || 3000;
+describe('Task API Routes', function() {
 
-app.use(express.json());
+  // In this test it's expected a task list of two tasks
+  describe('GET /users', function() {
+      it('returns a list of users', function(done) {
+          request.get('/users')
+              .expect(200)
+              .end(function(err, res) {
+                done(err);
+              });
+      });
+  });
 
-const FileSync = require('lowdb/adapters/FileSync');
+  // Testing the save task expecting status 201 of success
+  describe('POST /users', function() {
+      it('saves a new users', function(done) {
+          request.post('/users')
+              .send({
+                name: "Chris",
+                age: 25,
+                gender: "WOMAN"
+              })
+              .expect(200)
+              .end(function(err, res) {
+                  done(err);
+              });
+      });
+  });
 
-//env TEST면 테스트 DB 파일로 연결
-const adapter = new FileSync('db.json');
-const db = lowdb(adapter);
+  // Here it'll be tested two behaviors when try to find a task by id
+  describe('GET /users/:id', function() {
+      // Testing how to find a task by id
+      it('returns a user by id', function(done) {
+          var user = app.db.get('users').first().value();
+          request.get('/users/' + user.id)
+              .expect(200)
+              .end(function(err, res) {
+                  done(err);
+              });
+      });
 
-app.db = db;
+      // Testing the status 404 for task not found
+      it('returns status 404 when id is not found', function(done) {
+          request.get('/users/fakeId')
+              .expect(404)
+              .end(function(err, res) {
+                  done(err);
+              });
+      });
+  });
 
-db.defaults({ users: [] }).write();
+  // Testing how to update a task expecting status 201 of success
+  describe('PUT /users/:id', function() {
+      it('updates a user', function(done) {
+          var user = app.db.get('users').first().value();
+          request.put('/users/' + user.id)
+              .send({
+                name: "Kevin",
+                age: 32,
+                gender: "MAN"
+              })
+              .expect(200)
+              .end(function(err, res) {
+                  done(err);
+              });
+      });
+      it('validate updated a user', function() {
+            var user = app.db.get('users').first().value();
+            //값을 판독
+      });
+  });
 
-app.get('/users', async function(req, res) {
-  res.send(db.get('users').value());
+  // Testing how to delete a task expecting status 201 of success
+  describe('DELETE /users/:id', function() {
+      it('removes a user', function(done) {
+          var user = app.db.get('users').first().value();
+          request.del('/users/' + user.id)
+              .expect(200)
+              .end(function(err, res) {
+                  done(err);
+              });
+      });
+  });
 });
-
-app.get('/users/:id', async function(req, res) {
-  const user = db.get('users').find({ id: req.params.id }).value();
-  if (!user) res.status(404).send("Not found");
-  else res.send(user);
-});
-
-app.post('/users', async function(req, res) {
-  db.get('users').push({ id: shortid.generate(), ...req.body }).write();
-  res.send(db.get('users').value());
-});
-
-app.put('/users/:id', async function(req, res) {
-  db.get('users')
-  .find({ id: req.params.id })
-  .assign(req.body)
-  .write()
-  res.send(db.get('users').value());
-});
-
-app.delete('/users/:id', async function(req, res) {
-  db.get('users')
-  .remove({ id: req.params.id })
-  .write()
-  res.send(db.get('users').value());
-});
-
-app.listen(port, () => {
-    console.log('Server is up on port ' + port);
-});
-
-module.exports = app;
